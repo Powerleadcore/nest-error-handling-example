@@ -1,7 +1,8 @@
+import { LogLevel } from 'src/Packages/Logger/Enums/logLevel';
 import { ErrorCategory } from '../Enums/ErrorCategory';
-import { LogLevel } from '../Enums/logLevel';
 import { iException } from '../Interfaces/iException';
 import { iHttpResponse } from '../Interfaces/iHttpResponse';
+import { LogCategory } from 'src/Packages/Logger/Enums/logCategory.enum';
 
 export class Exception extends Error implements iException {
   code: string;
@@ -11,6 +12,7 @@ export class Exception extends Error implements iException {
   scope: string;
   log: boolean = false;
   logLevel: LogLevel = LogLevel.ERROR;
+  logCategory: LogCategory = LogCategory.SYSTEM;
   category: ErrorCategory;
   errors?: any[];
   payload?: any;
@@ -25,6 +27,7 @@ export class Exception extends Error implements iException {
     httpResponse: iHttpResponse;
     log?: boolean;
     logLevel?: LogLevel;
+    logCategory?: LogCategory;
     errors?: any[];
     payload?: any;
   }) {
@@ -34,11 +37,28 @@ export class Exception extends Error implements iException {
     this.scope = props.scope;
     this.category = props.category;
     this.errors = props.errors;
-    this.payload = props.payload;
-    this.httpResponse = props.httpResponse;
     this.log = props.log || false;
     this.logLevel = props.logLevel || LogLevel.ERROR;
+    this.logCategory = props.logCategory || LogCategory.SYSTEM;
+    this.payload = props.payload;
+    this.httpResponse = props.httpResponse;
+    this.logLevel = props.logLevel || LogLevel.ERROR;
     this.timestamp = new Date();
+  }
+
+  logException() {
+    return {
+      category: this.logCategory,
+      payload: {
+        code: this.code,
+        name: this.name,
+        scope: this.scope,
+        category: this.category,
+        stack: this?.stack,
+        errors: this?.errors,
+        payload: this?.payload,
+      },
+    };
   }
 
   toJSON(): iException {
@@ -51,6 +71,9 @@ export class Exception extends Error implements iException {
       stack: this?.stack,
       errors: this?.errors,
       payload: this?.payload,
+      log: this?.log,
+      logLevel: this?.logLevel,
+      logCategory: this?.logCategory,
       httpResponse: {
         status: this.httpResponse?.status,
         message: this.httpResponse?.message,

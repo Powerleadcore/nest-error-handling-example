@@ -1,5 +1,7 @@
+import { LogLevel } from 'src/Packages/Logger/Enums/logLevel';
 import { ErrorCategory } from '../Enums/ErrorCategory';
 import { iHttpResponse } from './iHttpResponse';
+import { LogCategory } from 'src/Packages/Logger/Enums/logCategory.enum';
 
 export interface iException extends Error {
   code: string;
@@ -10,6 +12,9 @@ export interface iException extends Error {
   stack?: string;
   errors?: any[];
   payload?: any;
+  log: boolean;
+  logLevel: LogLevel;
+  logCategory: LogCategory;
   httpResponse: iHttpResponse;
   timestamp: Date;
 }

@@ -1,27 +1,27 @@
-import { Logger } from '@nestjs/common';
+import { Logger } from 'src/Packages/Logger/Services/Logger.service';
 import { Exception } from '../../Domain/Aggragates/Exception';
-import { LogLevel } from '../../Domain/Enums/logLevel';
+import { LogLevel } from 'src/Packages/Logger/Enums/logLevel';
 
 export function logException(exception: Exception, logger: Logger): void {
   if (exception.log) {
     switch (exception.logLevel) {
       case LogLevel.ERROR:
-        logger.error(exception.toJSON());
+        logger.error(exception.message, exception.logException());
         break;
       case LogLevel.WARN:
-        logger.warn(exception.toJSON());
+        logger.warn(exception.message, exception.logException());
         break;
       case LogLevel.DEBUG:
-        logger.debug(exception.toJSON());
+        logger.debug(exception.message, exception.logException());
         break;
       case LogLevel.VERBOSE:
-        logger.verbose(exception.toJSON());
+        logger.verbose(exception.message, exception.logException());
         break;
       case LogLevel.FATAL:
-        logger.error(exception.toJSON());
+        logger.error(exception.message, exception.logException());
         break;
       default:
-        logger.log(exception.toJSON());
+        logger.log(exception.message, exception.logException());
     }
   }
 }

@@ -1,7 +1,7 @@
+import { LogLevel } from 'src/Packages/Logger/Enums/logLevel';
 import { Exception } from '../../Domain/Aggragates/Exception';
 import { ErrorCategory } from '../../Domain/Enums/ErrorCategory';
 import { HttpCode } from '../../Domain/Enums/HttpCode';
-import { LogLevel } from '../../Domain/Enums/logLevel';
 
 export class UnknownException extends Exception {
   constructor(props: {
