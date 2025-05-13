@@ -1,4 +1,4 @@
-import { Logger } from 'src/Packages/Logger/Services/Logger.service';
+import { Logger } from '@nestjs/common';
 import { Exception } from '../../Domain/Aggragates/Exception';
 import { UnknownException } from '../Exception/Unknown.exception';
 import { logException } from './logException';

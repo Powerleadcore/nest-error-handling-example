@@ -1,6 +1,5 @@
-import { Injectable, NestMiddleware } from '@nestjs/common';
-import { Request, Response, NextFunction } from 'express';
-import { Logger } from '../Services/Logger.service';
+import { Injectable, Logger, NestMiddleware } from '@nestjs/common';
+import { FastifyRequest, FastifyReply } from 'fastify';
 import { LogCategory } from '../Enums/logCategory.enum';
 import { requestStorage } from '../Context/requestContext.service';
 import { ConfigService } from '@nestjs/config';
@@ -46,7 +45,7 @@ export class HttpMiddleware implements NestMiddleware {
     ];
   }
 
-  use(req: Request, res: Response, next: NextFunction): void {
+  use(req: FastifyRequest, res: FastifyReply, next: () => void): void {
     const startTime = Date.now();
     // IMPORTANT: Create and run with context FIRST
     // Then do everything else inside the callback
@@ -65,145 +64,150 @@ export class HttpMiddleware implements NestMiddleware {
     );
   }
 
-  private logIncomingRequest(req: Request): void {
+  private logIncomingRequest(req: FastifyRequest): void {
     // Extract useful information from the request
-    const { method, originalUrl, headers, query, body } = req;
-    this.logger.log(`Incoming ${method} request to ${originalUrl}`, {
+    const { method, url, headers, query, body, ip, hostname, protocol } = req;
+
+    // Get the real IP address (considering proxies)
+    const realIp = this.getRealIp(req);
+
+    // Extract user agent info
+    const userAgent = headers['user-agent'] || 'unknown';
+
+    // Sanitize request body to remove sensitive information
+    const sanitizedBody =
+      method !== 'GET' && body && !this.isMultipartFormData(headers)
+        ? JSON.stringify(body)
+        : undefined;
+
+    this.logger.log(`Incoming ${method} request to ${url}`, {
       category: LogCategory.HTTP,
+      correlationId: requestStorage.getStore()?.correlationId,
       payload: {
         type: 'REQUEST',
         method,
-        path: originalUrl,
+        path: url,
         query,
-        headers: headers,
+        headers,
+        // Enhanced context information
+        requestContext: {
+          ip: realIp,
+          forwardedIp: headers['x-forwarded-for'],
+          userAgent,
+          hostname,
+          protocol,
+          referer: headers.referer || headers.referrer,
+          timestamp: new Date().toISOString(),
+        },
         // Only include body for non-GET requests and when appropriate
-        ...(method !== 'GET' && body && !this.isMultipartFormData(headers)
-          ? { body: body }
-          : {}),
+        ...(sanitizedBody ? { body: sanitizedBody } : {}),
       },
     });
   }
 
+  private getRealIp(req: FastifyRequest): string {
+    // Try to get the real IP address accounting for proxies
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (forwardedFor) {
+      // x-forwarded-for can be a comma-separated list, the first entry is the original client
+      const ips = Array.isArray(forwardedFor)
+        ? forwardedFor[0]
+        : (typeof forwardedFor === 'string' && forwardedFor) ? (forwardedFor.split(',')[0] || '').trim() : '';
+      return ips || 'unknown';
+    }
+
+    // Fastify specific IP retrieval
+    return req.ip || 'unknown';
+  }
+
   private captureResponseData(
-    res: Response,
-    req: Request,
+    res: FastifyReply,
+    req: FastifyRequest,
     startTime: number,
   ): void {
-    // Store the original methods
-    const originalEnd = res.end;
-    const originalWrite = res.write;
-    const originalSetHeader = res.setHeader;
-    const chunks: Buffer[] = [];
+    // Store original methods
+    const originalSend = res.send;
 
-    // Track if we should capture the response body
+    // Fastify uses send instead of write/end
+    let responseBody: any = undefined;
     let contentType = '';
 
-    // Override setHeader to capture content-type when it's set
+    // Override send method to capture response data
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
-    res.setHeader = function (
-      name: string,
-      value: string | number | readonly string[],
-    ): Response {
-      if (name.toLowerCase() === 'content-type') {
-        contentType = Array.isArray(value) ? value[0] : String(value);
-      }
-      // eslint-disable-next-line prefer-rest-params
-      return originalSetHeader.apply(this, arguments);
-    };
 
-    // Override write method to capture response data chunks
-    res.write = function (this: Response, chunk: any, ...args: any[]): boolean {
-      // Always capture chunks, we'll filter later
-      if (Buffer.isBuffer(chunk)) {
-        chunks.push(chunk);
-      } else if (typeof chunk === 'string') {
-        chunks.push(Buffer.from(chunk));
-      }
-      return originalWrite.apply(this, [chunk, ...args]);
-    };
-
-    // Override end method to capture response data
-    const logger = this.logger;
-    res.end = function (this: Response, chunk?: any, ...args: any[]): Response {
-      // If there's a chunk in the end call, capture it too
-      if (chunk) {
-        if (Buffer.isBuffer(chunk)) {
-          chunks.push(chunk);
-        } else if (typeof chunk === 'string') {
-          chunks.push(Buffer.from(chunk));
-        }
-      }
-
-      // Calculate response time
+    res.send = function (this: FastifyReply, payload?: any): FastifyReply {
+      // Calculate response time before executing original method
       const responseTime = Date.now() - startTime;
+
+      // Store data for logging
+      responseBody = payload;
+      contentType = res.getHeader('content-type') as string || '';
+
+      // Execute original send method
+      const result = originalSend.apply(this, [payload]);
 
       // Get status code
       const statusCode = res.statusCode;
 
-      // If content-type wasn't set via setHeader, try to get it now
-      if (!contentType) {
-        contentType = String(res.getHeader('content-type') || '');
-      }
-
-      // Calculate total response size
-      const responseSize = chunks.reduce(
-        (total, chunk) => total + chunk.length,
-        0,
-      );
-
-      // Prepare response body when appropriate
-      let responseBody = undefined;
+      // Determine if we should log the body
       const shouldLog = self.shouldCaptureResponseBody(res, contentType);
 
-      if (shouldLog && responseSize > 0) {
-        if (responseSize <= self.maxBodySize) {
-          try {
-            // Combine chunks and convert to string
-            const bodyBuffer = Buffer.concat(chunks);
-            const bodyString = bodyBuffer.toString('utf8');
+      // Prepare response for logging
+      let loggedBody: any = undefined;
 
-            // Try to parse JSON if applicable
-            if (contentType.includes('application/json')) {
-              try {
-                responseBody = JSON.parse(bodyString);
-              } catch {
-                // If JSON parsing fails, log as plain text
-                responseBody = bodyString;
-              }
-            } else {
-              responseBody = bodyString;
-            }
+      if (shouldLog && responseBody !== undefined) {
+        // Calculate response size
+        const bodySize = typeof responseBody === 'string'
+          ? Buffer.from(responseBody).length
+          : Buffer.from(JSON.stringify(responseBody) || '').length;
+
+        if (bodySize <= self.maxBodySize) {
+          try {
+            // Sanitize response body to remove sensitive data
+            loggedBody =
+              typeof responseBody === 'object'
+                ? JSON.stringify(responseBody)
+                : String(responseBody)
           } catch (error) {
-            responseBody = `<Error parsing response body: ${error.message}>`;
+            loggedBody = `<Error sanitizing response body: ${error.message}>`;
           }
         } else {
-          responseBody = `<Response body too large: ${responseSize} bytes>`;
+          loggedBody = `<Response body too large: ${bodySize} bytes>`;
         }
       }
 
-      // Log the response with debugging info
-      logger.log(`Response ${statusCode} sent in ${responseTime}ms`, {
+      // Get the real IP, reusing the method
+      const realIp = self.getRealIp(req);
+
+      // Log the response
+      self.logger.log(`Response ${statusCode} sent in ${responseTime}ms`, {
         category: LogCategory.HTTP,
+        correlationId: requestStorage.getStore()?.correlationId,
         payload: {
           type: 'RESPONSE',
           method: req.method,
-          path: req.originalUrl,
+          path: req.url,
           statusCode,
           responseTime,
-          responseSize,
           contentType,
-          ...(responseBody !== undefined ? { body: responseBody } : {}),
+          // Enhanced context information
+          responseContext: {
+            ip: realIp,
+            bytesSize: typeof loggedBody === 'string' ? Buffer.from(loggedBody).length : undefined,
+            route: req.routeOptions?.url,
+            routeParams: req.params,
+          },
+          ...(loggedBody !== undefined ? { body: loggedBody } : {}),
         },
       });
 
-      // Call the original end method
-      return originalEnd.apply(this, chunk ? [chunk, ...args] : args);
+      return result;
     };
   }
 
   private shouldCaptureResponseBody(
-    res: Response,
+    res: FastifyReply,
     contentType: string = '',
   ): boolean {
     if (!this.logResponseBody) return false;

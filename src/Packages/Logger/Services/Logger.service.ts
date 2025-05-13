@@ -13,8 +13,8 @@ import { LogCategory } from '../Enums/logCategory.enum';
 import { ILog } from '../Interfaces/iLog';
 import { isILog } from '../Helpers/type-guards';
 import { devConsoleFormat } from '../Helpers/dev.console.logger';
-import { getCorrelationId } from 'src/Packages/Logger/Context/requestContext.service';
 import { safeStringify } from '../Helpers/safe-stringify';
+import { getCorrelationId } from '../Context/requestContext.service';
 
 @Injectable()
 export class Logger implements LoggerService, iLogger {
@@ -194,7 +194,6 @@ export class Logger implements LoggerService, iLogger {
             },
           };
         } else {
-          // Any other value becomes payload data
           payload = {
             category: LogCategory.SYSTEM,
             payload: param,

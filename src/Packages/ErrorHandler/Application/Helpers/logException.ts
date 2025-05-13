@@ -1,6 +1,6 @@
-import { Logger } from 'src/Packages/Logger/Services/Logger.service';
+import { Logger } from '@nestjs/common';
 import { Exception } from '../../Domain/Aggragates/Exception';
-import { LogLevel } from 'src/Packages/Logger/Enums/logLevel';
+import { LogLevel } from '@Packages/Logger/Enums/logLevel';
 
 export function logException(exception: Exception, logger: Logger): void {
   if (exception.log) {

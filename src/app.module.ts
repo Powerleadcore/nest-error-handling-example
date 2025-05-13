@@ -1,18 +1,12 @@
 import { Module } from '@nestjs/common';
-import { TestModule } from './Modules/Test/test.module';
-import { ConfigModule } from '@nestjs/config';
-import { LoggerModule } from './Packages/Logger/index.module';
+import { GlobalModule } from './Modules/Global/index.module';
+import { IndentityModule } from '@Modules/Identity/index.module';
+import { TestModule } from '@Modules/Test/test.module';
+import { AuthZ } from '@Modules/AuthZ/index.module';
 
 @Module({
-  imports: [
-    LoggerModule,
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: ['.env'],
-    }),
-    TestModule,
-  ],
+  imports: [GlobalModule, IndentityModule, TestModule],
   controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }

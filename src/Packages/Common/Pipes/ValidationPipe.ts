@@ -22,9 +22,11 @@ export class CustomValidationPipe implements PipeTransform<any> {
       throw new ValidationException(
         errors.map((error) => ({
           field: error.property,
-          message: Object.keys(error.constraints).map(
-            (key) => error.constraints[key],
-          ),
+          message: error.constraints 
+            ? Object.keys(error.constraints).map(
+                (key) => error.constraints![key],
+              )
+            : [],
         })),
       );
     }
@@ -40,7 +42,7 @@ export class CustomValidationPipe implements PipeTransform<any> {
   }
 
   private formatErrors(errors: ValidationError[]) {
-    const result = {};
+    const result: Record<string, any> = {};
 
     errors.forEach((error) => {
       const property = error.property;

@@ -1,4 +1,4 @@
-import { LogLevel } from 'src/Packages/Logger/Enums/logLevel';
+import { LogLevel } from '@Packages/Logger/Enums/logLevel';
 import { Exception } from '../../Domain/Aggragates/Exception';
 import { ErrorCategory } from '../../Domain/Enums/ErrorCategory';
 import { HttpCode } from '../../Domain/Enums/HttpCode';

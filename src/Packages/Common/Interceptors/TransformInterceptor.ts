@@ -10,7 +10,7 @@ import { map } from 'rxjs/operators';
 
 export interface Response<T> {
   status: number;
-  message: string;
+  message?: string;
   data?: T | null;
   errors?: any | null;
 }
@@ -28,19 +28,19 @@ export class TransformInterceptor<T>
         const ctx = context.switchToHttp();
         const response = ctx.getResponse();
         const status = response.statusCode || HttpStatus.OK;
-        let message: string = undefined;
+        let message: string | undefined = undefined;
         let _data: any = undefined;
         if (typeof data !== 'object') {
           message = data;
         } else {
-          _data = data.data || data || undefined;
-          message = data.message || undefined;
+          _data = data?.data || data || undefined;
+          message = data?.message || undefined;
         }
         return {
           status,
-          message,
+          message: message || undefined,
           data: _data,
-          errors: data.errors || undefined,
+          errors: data?.errors || undefined,
         };
       }),
     );

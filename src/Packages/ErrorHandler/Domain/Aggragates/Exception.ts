@@ -1,8 +1,8 @@
-import { LogLevel } from 'src/Packages/Logger/Enums/logLevel';
+import { LogLevel } from '@Packages/Logger/Enums/logLevel';
 import { ErrorCategory } from '../Enums/ErrorCategory';
 import { iException } from '../Interfaces/iException';
 import { iHttpResponse } from '../Interfaces/iHttpResponse';
-import { LogCategory } from 'src/Packages/Logger/Enums/logCategory.enum';
+import { LogCategory } from '@Packages/Logger/Enums/logCategory.enum';
 
 export class Exception extends Error implements iException {
   code: string;

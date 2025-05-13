@@ -1,4 +1,4 @@
-import { ErrorCategory, Exception, HttpCode } from 'src/Packages/ErrorHandler';
+import { ErrorCategory, Exception, HttpCode } from "@Packages/ErrorHandler";
 
 export class ValidationException extends Exception {
   constructor(errors: any[]) {

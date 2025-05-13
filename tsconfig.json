@@ -1,7 +1,13 @@
 {
+  "ts-node": {
+    "require": [
+      "tsconfig-paths/register"
+    ]
+  },
   "compilerOptions": {
-    "module": "commonjs",
     "declaration": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
@@ -9,13 +15,23 @@
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
+    "baseUrl": "./src",
     "incremental": true,
     "skipLibCheck": true,
-    "strictNullChecks": false,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "esModuleInterop": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "strictFunctionTypes": true,
+    "paths": {
+      "@Packages/*": ["Packages/*"],
+      "@Global/*": ["Global/*"],
+      "@Modules/*": ["Modules/*"],
+      "@Shared/*": ["Shared/*"]
+    }
   }
 }

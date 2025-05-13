@@ -1,7 +1,6 @@
-import { ArgumentsHost, Catch } from '@nestjs/common';
+import { ArgumentsHost, Catch, Logger } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { handleException } from '../Helpers/handleException';
-import { Logger } from 'src/Packages/Logger/Services/Logger.service';
 
 @Catch()
 export class GlobalExceptionFilter {
